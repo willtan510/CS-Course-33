@@ -1,0 +1,7 @@
+a. 
+The conditional in this code always succeeds because the return type of sizeof() is size_t, which happens to be unsigned
+Because it is unsigned, the subtraction between the two in the conditional is evaluated as unsigned arithmetic, always yielding a number greater than or equal to 0.
+b.
+To fix it, you can replace the conditional statement with simply
+
+(maxbytes>=sizeof(val))

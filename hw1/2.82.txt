@@ -1,0 +1,21 @@
+a)
+The expression doesn't always yield 1, because if x is the smallest integer 0 and y is the smallest plus one so 1,
+the negatives of those would yield 0 (due to the cutoff) and the greatest integer, disproving it.
+b)
+This should always yield 1 because <<4 multiplies the value by 16, and it is distributive to the x and y,
+so 16x + 16y +y -x yields 17y+15x.
+c)
+This would always yield 1 because ~(x+y) +1 is -(x+y). If you distribute the negative and split -x and -y into their complements
+you can simplfy easily to the given statement.
+d)
+This would always yield 1 because the unsigned can be distributed as well as the negative sign so that you will get
+unsigned x - unsigned y.
+e)
+This should always yield 1 because if the least significant bits on the right had values of 1 originally, then they're
+permanently cut off from the byte. This means both positive and negative numbers could be potentially less by 3.
+f)
+This expression doesn't always yield 1, such as when x=-1, 0b1111...1111. x>>1 would yield 0b1111...1111, 2^32 -1.
+On the right side, ux>>1 would result in 2^32-1, then + (ux & (-1<<31)) becomes 1111...1111+1111...1111, which equals 0 due to the cutoff.
+g)
+This should always yield 1 because the modulo operator's return value is the remainder. When a & operator is used
+on the input and 127, because all its bit pattern looks like 00...01111111, the remainder is accurately the result of the & operator.

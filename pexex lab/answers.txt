@@ -1,0 +1,15 @@
+1.
+The instructions in the trace don't produce the right mathemtical result because we can see from the lisp.h file that for integers, 3 bits are set aside for tagging and the sign bit so that the number of bits available to be used for the value, VALBITS in lisp.h. More specifically, VALBITS=BITS_PER_EMACS_INT - GCTYPEBITS, which GCTYPEBITS equal to 3.
+More specifically, the instruction that causes this is lea 0x2(,%rbp,4),%rax. From this instruction, rax becomes 0x1FFFFFFFDCEACED0, despite rbp really being equal to 0xDFFFFFFFDCEACED0. The instruction causes rbp to be multiplied by 4, shifting it left by 2 and losing two of the bits to make room for tagging bits. Due to the most 2 signficant bits being cutoff for tagging, the resultant integer we get is 0x1FFFFFFFDCEACED0 returned rather than the correct product of 0xDFFFFFFFDCEACED0.
+
+2.
+This number came from a data.c function calling the MOST-NEGATIVE-FIXNUM constant in emacs, which for signed integers in this case is -2^61. These 61 bits are due to 3 bits set aside for tagging and the sign bit. So -2305843009213693952 is the lowest possible integer able to be outputted by emacs.
+
+3.
+This shell command outputs only 1 because most-positive-fixnum to the power of four has its 64-bit representation of 00000...1. This is because the integer result value is so high that those bits are cutoff from the final answer. More specifically, (2^63-1) multiplied by itself yields a value with its least significant 64 bits being 000...1. This value is then multiplied by (2^63-1) again, making it 2^63-1. When this value is multiplied by 2^63-1 one last time, the 64 lowest bits are again 000...1 due to the more signficant bits being cutoff from overflow.
+
+4.
+In the current data.c source code, there are checks in the arith_driver function for checking if there's overflow or not. With the -fwrapv option in place, these checks won't be needed anymore, meaning the value would be able to overflow and wrap around without the fuss of code dealing with overflow. No runtime or compiler errors would necessarily occur because it would only affect the mathematical result with overflow.
+
+5.
+In this command, at the function emacs_setenv_TZ, at line 2428, the error occurs. This is caused by a movdqu instruction from the %xmm7 register to the address of -0x10(%rdi). A segmentation fault error occurs because at this instance memory address 0x149b00, which is the value of rdi, cannot be accessed due to this memory not belonging to this program. (gdb) x 0x149b00a outputs an error when this memory location is attempted to be accessed.

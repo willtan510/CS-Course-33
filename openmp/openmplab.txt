@@ -1,0 +1,80 @@
+I made two directories of the openmp lab, one for control testing and one for testing the changed func.c.
+
+I looked up how to implement openmp parallelism on google. From there, I learned how to implement the parallelism for for loops with a specified number of threads. Using the command:
+
+lscpu | egrep 'Thread|Core|Socket|^CPU\('
+
+I found out the number of threads per core, number of cores per socket, and total number of sockets. The output was:
+
+CPU(s):                16
+Thread(s) per core:    2
+Core(s) per socket:    8
+Socket(s):             2
+
+From this, we can calculate that the max number of threads usable at once for parallel threading on lxsrv09 is 32, 2*8*2 from this server's specs. This means the optimal number to be used is a bit below this value in order to save some threads for the system.
+
+make seq GPROF=1
+./seq
+gprof seq | less
+      //The above commands were given under the guidance of my TA to display the time distribution for each function. The output of the gprof command is as followed:
+      
+  
+
+   %   cumulative   self              self     total
+ time   seconds   seconds    calls  ms/call  ms/call  name
+ 67.18      0.53     0.53       15    35.38    37.54  func1
+ 21.55      0.70     0.17  5177344     0.00     0.00  rand2
+  3.80      0.73     0.03                             sequence
+  2.54      0.75     0.02   491520     0.00     0.00  findIndexBin
+  1.27      0.76     0.01       15     0.67     0.67  func2
+  1.27      0.77     0.01       15     0.67     0.67  func4
+  1.27      0.78     0.01       15     0.67     2.00  func5
+  1.27      0.79     0.01        1    10.01    10.01  imdilateDisk
+  0.00      0.79     0.00   983042     0.00     0.00  round
+  0.00      0.79     0.00       16     0.00     0.00  dilateMatrix
+  0.00      0.79     0.00       15     0.00     0.00  func3
+  0.00      0.79     0.00       15     0.00     0.00  rand1
+  0.00      0.79     0.00        2     0.00     0.00  get_time
+  0.00      0.79     0.00        1     0.00   137.91  addSeed
+  0.00      0.79     0.00        1     0.00     0.00  elapsed_time
+  0.00      0.79     0.00        1     0.00     0.00  fillMatrix
+  0.00      0.79     0.00        1     0.00     0.00  func0
+  0.00      0.79     0.00        1     0.00     0.00  getNeighbors
+
+  //This indicates that out of the 6 functions that we're optimizing, the order of priority in optimizing the functions are func1, func2, func4, func5, func3, and func0.
+
+Within each function, local variables were used to replace unnecessary calls to RAM and reduce the number of repeated arithmetic operations. Some for loops were combined, if possible, as well to improve optimization.
+
+The main bulk of the optimization however was through the use of the openmp parallel threading. Before each for loop, the line in the format of:
+#pragma omp parallel for num_threads(_) private(_,_,...) firstprivate(_,_,...)
+	//and reduction(+:__) if necessary
+was inserted to utilize OpenMp.
+
+num_threads(_) was used to specify how many threads were to be run in parallel
+	       //From repeated tests afterwards, 29 seemed to be optimal and not too variable
+
+private(...) was used to specify the variables in the for loop that were to be uninitialized entering the for loop threads.
+
+firstprivate(...) was used to specify the variables in the for loop that were to have the same value as they were declared to have earlier in the code.
+
+reduction(+:__) was used to specify the variables in the for loop that would be accumulating in each iteration of the loop by each thread.
+
+
+To check time, I took the average of five func times for both seq and omp.
+make clean
+make omp
+make seq
+./omp
+./seq
+
+Average of omp: .0416888 seconds
+Average of seq: .5091706 seconds
+The speedup is given by the time of seq divided by the time of omp.
+So the total speedup, given my runs, is: 12.2x
+
+make clean
+make omp MTRACE=1
+./omp
+make check
+make checkmem
+     //These commands ensured that the output was still correct after implementing the parallelism and that were were no memory leaks.

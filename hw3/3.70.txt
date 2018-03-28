@@ -1,0 +1,12 @@
+3.70
+A)
+e1.p: offset of 0
+e1.y: offset of 8
+e2.x: offset of 0
+e2.next: offset of 8
+
+B)
+The structure requires 16 bytes in total.
+
+C)
+up->x=*(up->next->p) - ip->next->y;

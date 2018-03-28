@@ -1,0 +1,34 @@
+60)
+a. 
+x is held by %rdi
+n is held by %esi and %ecx
+result is held by %rax
+mask is held by %rdx
+
+b.
+The initial vlue of result is 0
+The initial value of mask is 1
+
+c. 
+The test condition for mask is if mask is not equal to 0. The testq of %rdx,%rdx sets the zero flag to 1 if
+mask is 0, otherwise the zero flag is 0. If the zero flag is 0, then the jne jumps to .L3
+
+d.
+Mask gets updated by being shifted to the left by the first 8 bits of %ecx, which is n. This is done
+at the end of the loop after the body of the for loop is run.
+
+e.
+Result gets updated in the body of the for loop, where it equals the OR operator result of it and the 
+product of mask&x. 
+
+f. 
+long loop(long x,long n)
+{
+  long result=0;
+  long mask;
+  for (mask=1;mask!= 0;mask=mask<< n&0xFF)
+    {
+      result |= (mask&x);
+    }
+return result;
+}

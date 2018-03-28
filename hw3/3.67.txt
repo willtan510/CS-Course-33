@@ -1,0 +1,30 @@
+3.67
+a)
+104(%rsp)
+.
+.
+24(%rsp)	//holds z
+16(%rsp)	//holds *p, which has value of &z
+8(%rsp) 	//holds a[1], which has the value of y
+%rsp		//holds a[0], which has the value of x
+
+
+b)Eval passes in the value of struct s into the call to process. This is more specifically done with %rdi, which holds the designated stack frame for process' variables.
+c)Process accesses the elements in the structure argument s by passing in the proper address in the stack pointer to a register in the process assembly code.
+d)The fields for process are set by having values placed into the address of %rdi and %rdi + 8 for the long array, and %rdx for the long variable with movq.
+e)
+104(%rsp)
+.
+.
+80(%rsp)	//holds value of z
+72(%rsp)	//holds u[1] which holds value of a[0]
+64(%rsp)	//holds u[0] which holds value of a[1]
+.
+.
+24(%rsp)	//holds z
+16(%rsp)	//holds *p, which has value of &z
+8(%rsp) 	//holds a[1], which has the value of y
+%rsp		//holds a[0], which has the value of x
+
+f)In general, structure values passed as function arguments are treated as values in the stack that are to be used in the called functions stack frame.
+These values are offset by 8 bytes however inside the function call, so one has to be careful about that. The function results are also returned similarly to how the arguments were saved, with memory in the stack pointer holding it.

@@ -1,0 +1,12 @@
+12.18
+a)
+This trajectory is unsafe because on the instruction of L1, the path crosses the unsafe region and enters it, classifying the trajectory as unsafe.
+b)
+This trajectory is safe because the path never enters the unsafe region, only grazes its borders but doesn't enter.
+c)
+This trajectory is unsafe because the H2, L2, and U2 instructions are all instructions that move inside the unsafe region, classifying this path as unsafe.
+
+
+12.24
+It is given that rio functions are thread-safe. In order for them to be classified as reentrant, then they must not access any data shared between the threads.
+In some of these functions, they require pointers as arguments. This grants the possibility for the pointers to be pointing to the same memory address, meaning that the threads would be accessing shared data, implying the functions are non-reentrant. This is all dependent on how the user uses the functions however. As we can see in the main function of figure 10.5, the user uses the functions such that they're reentrant because the pointers will never point to the same address.

@@ -1,0 +1,17 @@
+2.89
+A.
+Always yields 1, this is because (float) x will always either be perfectly represented or rounded using round-to-even. (float) dx was initially an int, then was perfectly converted to a double due to the greater precision, and then converted to a float, so if needed, the precision limitation from double-> float would cause the the dx to round-to-even as well, similar to (float) x.
+
+B.
+This does not always yield 1. If dx were int_max, and dy were a negative number, such as -5, then there'd be no overflow on the left side of the operator. For the right side, if x were int_max and y was the same negative number as dy, than there'd be overflow in the int, with this overflow being casted into a double. -fwrapv would apply in this case because there is overflow in this case. 
+
+C.
+Always yields 1. This is because these double values used to be ints, meaning at max they were int_max or int_min values, which doubles can more than easily represent due to the number of bits at its disposal. When these values are added, the max integer attainable would be 3x int_max, which double can still easily represent, so the left and right side would never encounter overflow.
+
+D.
+This does not always yield 1. The rounding when the product is greater than the greatest sequential representable integer will cause the associative property of multiplication to not always hold true with the right operands. 
+For example, if dx=int_max, dy=int_max, and dz=2147483909, then multiplying the dx and dy first would result in a product that needs to be rounded. Then multiplying this product with dz would result in a product different than if int_max were multiplied by 2147483909 first and then another int_max, due to different rounding from the first multiplication operation.
+
+E.
+This does not always yield 1 in the case that dx and/or dz is equal to 0. This because 0/0 yields NaN, and Nan whenever compared to another number never yields 1, even if compared with another NaN.
+

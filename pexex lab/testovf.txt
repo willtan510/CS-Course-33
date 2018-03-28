@@ -1,0 +1,45 @@
+-O2
+testovf:
+.LFB0:
+	xorl	%eax, %eax
+	ret
+
+The -O2 option has the compiler solely optimizing the code so that the function always returns 0, the result of xor'ing a register upon itself. This is due to the compiler ignoring the overflow cases. This means any value n would have the comparison operator return false, hence 0 in the register, because n + (positive) < n is always false unless overflow causes the value to wrap around.
+
+-O2 -fwrapv
+testovf:
+.LFB0:
+	movabsq	$9223372036854775807, %rax
+	addq	%rdi, %rax
+	cmpq	%rax, %rdi
+	setg	%al
+	ret
+
+The addition of the -fwrapv option allows for overflow to be wrapped around, so in this case, n being positive would result in a negative sum. This sum and n are then compared, if the zero-flag is 0 and the sign-flag=overflow flag, then the the return register is set to 1, meaning the function would return true if n was positive.
+
+-O2 -fsanitize=undefined
+testovf:
+.LFB0:
+
+	pushq	%rbp
+	pushq	%rbx
+	movabsq	$9223372036854775807, %rdx
+	movq	%rdi, %rbp
+	movq	%rdi, %rbx
+	subq	$8, %rsp
+	addq	%rdx, %rbp
+	jo	.L6
+.L2:
+	cmpq	%rbp, %rbx
+	setg	%al
+	addq	$8, %rsp
+	popq	%rbx
+	popq	%rbp
+	ret
+.L6:
+	movq	%rdi, %rsi
+	movl	$.Lubsan_data0, %edi
+	call	__ubsan_handle_add_overflow
+	jmp	.L2
+
+The fsanitize=undefined option makes it so an error message is passed if overflow does occur. This is done by adding the two values and seeing if the overflow flag was set by that operation. If so, then it jumps to another block of assembly code to produce an error message. Otherwise the sum and n are compared like usual and the return register is set accordingly. The push, pop, subq, and addq operations are done to utilize the stack for this function.
